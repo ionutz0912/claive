@@ -253,6 +253,41 @@ SKILL.md                — Orchestrator brain prompt
 ARCHITECTURE.md         — Full design document
 ```
 
+## Security
+
+claive runs Claude Code agents that execute real commands on your machine. You should understand the trust model before using it.
+
+### Trust model
+
+```
+You (human) → Orchestrator (Claude Code + SKILL.md) → Worker agents (Claude Code)
+```
+
+All agents run under **your user account** in a shared tmux session. An agent can do anything you can do. This is by design — agents need filesystem and git access to do real work.
+
+`claive start` launches the orchestrator with `--dangerously-skip-permissions`, which disables Claude Code's interactive permission prompts. Without this, the orchestrator can't spawn or coordinate agents autonomously. **This means agents will execute commands without asking you first.**
+
+### What's hardened
+
+- **No network dependencies.** No remote script fetching, no package downloads at runtime, no phoning home. Everything runs locally.
+- **No secrets handling.** claive never reads, stores, or transmits API keys or credentials. Don't put secrets in agent prompts.
+- **File permissions.** State files (`budget.json`, `audit.jsonl`, `board.json`) are `chmod 600`. Session directories are `chmod 700`.
+- **Concurrent-safe state.** All state file access uses `fcntl.flock` to prevent corruption from parallel agents.
+- **Append-only audit.** Every spawn, kill, send, read, merge, and handoff is logged to `state/audit.jsonl`.
+- **No dependencies you can't read.** The entire codebase is ~1300 lines. `watchdog` and `pyyaml` are optional.
+
+### Known limitations
+
+- Agents share a tmux session — one agent could `tmux capture-pane` another agent's terminal. Use separate tmux sockets if you need strict isolation.
+- Prompts are visible in tmux pane buffers. Don't include passwords or tokens in agent prompts.
+- A compromised agent runs as your user and could modify claive's own scripts.
+- No encryption at rest — state files rely on Unix file permissions, not cryptography.
+- Budget limits are advisory, not enforced by billing. An agent can't spend real money, but it can ignore its soft cap.
+
+### Audit it yourself
+
+That's the point. At ~1300 lines across 10 files, you can read the entire codebase in under an hour. Start with `bin/claive` (200 lines) and `lib/spawn.sh` (137 lines) — that's the core. See `context/security-model.md` for the full threat model.
+
 ## Contributing
 
 1. Fork the repository
