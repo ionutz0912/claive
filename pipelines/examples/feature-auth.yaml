@@ -1,0 +1,33 @@
+# JWT authentication feature — schema first, then parallel backend + frontend, then tests.
+# Run: claive run pipelines/examples/feature-auth.yaml
+
+pipeline: add-auth
+
+defaults:
+  budget: 5.00
+
+tasks:
+  schema:
+    prompt: "Design the auth database schema: users table with email, password_hash, role. Create a migration file at db/migrations/001_auth.sql. Include indexes on email."
+    outputs: [db/migrations/001_auth.sql]
+    branch: feature/auth-schema
+
+  backend:
+    prompt: "Implement JWT auth endpoints: POST /auth/register, POST /auth/login, GET /auth/me. Use the schema from {schema.outputs}. Include password hashing with bcrypt and JWT token generation."
+    depends_on: [schema]
+    outputs: [src/routes/auth.ts, src/middleware/auth.ts]
+    branch: feature/auth-backend
+    budget: 8.00
+
+  frontend:
+    prompt: "Build login and register forms in React. POST to /auth/login and /auth/register. Store JWT in httpOnly cookie. Add an AuthContext provider. Use the schema from {schema.outputs} for field validation."
+    depends_on: [schema]
+    outputs: [src/components/LoginForm.tsx, src/components/RegisterForm.tsx, src/contexts/AuthContext.tsx]
+    branch: feature/auth-frontend
+    budget: 8.00
+
+  tests:
+    prompt: "Write integration tests for the auth system. Test register, login, token validation, and protected route access. Cover edge cases: duplicate email, wrong password, expired token. Test files: {backend.outputs} and {frontend.outputs}."
+    depends_on: [backend, frontend]
+    outputs: [tests/auth.test.ts]
+    branch: feature/auth-tests

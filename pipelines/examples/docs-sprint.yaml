@@ -1,0 +1,27 @@
+# Documentation sprint — 3 parallel writers, then 1 reviewer.
+# Maximum parallelism pattern: independent tasks fan out, then converge.
+# Run: claive run pipelines/examples/docs-sprint.yaml
+
+pipeline: docs-sprint
+
+defaults:
+  budget: 3.00
+
+tasks:
+  api-docs:
+    prompt: "Document every API endpoint in the project. For each: method, path, request body, response shape, auth requirements, and a curl example. Write to docs/api-reference.md."
+    outputs: [docs/api-reference.md]
+
+  setup-guide:
+    prompt: "Write a developer setup guide. Cover: cloning, installing dependencies, environment variables, database setup, running dev server, and running tests. Write to docs/setup-guide.md."
+    outputs: [docs/setup-guide.md]
+
+  architecture:
+    prompt: "Document the system architecture. Cover: directory structure, data flow, key design decisions, and how the major components interact. Include a text diagram. Write to docs/architecture.md."
+    outputs: [docs/architecture.md]
+
+  review:
+    prompt: "Review the three docs: {api-docs.outputs}, {setup-guide.outputs}, {architecture.outputs}. Check for accuracy, completeness, and consistency. Fix any issues in-place. Add cross-references between docs where relevant."
+    depends_on: [api-docs, setup-guide, architecture]
+    outputs: [docs/api-reference.md, docs/setup-guide.md, docs/architecture.md]
+    budget: 5.00

@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# State files (user-specific, not committed)
+state/sessions.json
+state/budget.json
+state/audit.jsonl
+state/board.json
+
+# EventMesh runtime directories (recreated at runtime)
+.claive/inbox/
+.claive/outbox/
+.claive/signals/
+
+# Pipeline checkpoints
+pipelines/.checkpoint-*
+
+# Personal notes (launch tracking, social assets, ideas)
+.notes/
+
+# IDE
+.idea/
+.vscode/
+*.code-workspace
+
+# System
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Logs
+*.log

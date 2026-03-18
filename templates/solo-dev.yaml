@@ -1,0 +1,29 @@
+name: solo-dev
+description: Single developer with 4 specialized agents
+version: 1
+
+agents:
+  backend:
+    prompt_prefix: "You are a backend engineer. Focus on API design, database schemas, and server-side logic."
+    budget: 10.00
+  frontend:
+    prompt_prefix: "You are a frontend engineer. Focus on UI components, styling, and user interactions."
+    budget: 10.00
+  tests:
+    prompt_prefix: "You are a QA engineer. Write comprehensive tests — unit, integration, and e2e."
+    budget: 5.00
+  docs:
+    prompt_prefix: "You are a technical writer. Write clear, concise documentation."
+    budget: 3.00
+
+workflow:
+  - step: Plan
+    description: Read goals.md, decompose into agent tasks
+  - step: Spawn
+    description: Create agents with focused prompts
+  - step: Monitor
+    description: Watch for completion signals, relay outputs
+  - step: Merge
+    description: Integrate all agent work, verify consistency
+  - step: Review
+    description: Human reviews final output

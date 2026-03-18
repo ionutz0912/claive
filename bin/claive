@@ -1,0 +1,200 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# claive — Multi-agent orchestrator for Claude Code
+# All agents run in tmux windows within a single session.
+
+CLAIVE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+CLAIVE_LIB="$CLAIVE_ROOT/lib"
+CLAIVE_STATE="$CLAIVE_ROOT/state"
+CLAIVE_HOOKS="$CLAIVE_ROOT/hooks"
+CLAIVE_SESSION="claive"
+CLAIVE_MESH="$CLAIVE_ROOT/.claive"
+CLAIVE_LOCAL_STATE="${XDG_STATE_HOME:-$HOME/.local/state}/claive"
+
+mkdir -p "$CLAIVE_STATE" "$CLAIVE_LOCAL_STATE"
+chmod 700 "$CLAIVE_LOCAL_STATE"
+
+source "$CLAIVE_LIB/spawn.sh"
+source "$CLAIVE_LIB/comms.sh"
+
+usage() {
+    cat <<'EOF'
+claive — Multi-agent orchestrator for Claude Code
+
+Usage:
+  claive spawn <name> [--prompt "..."] [--budget $N] [--branch <b>] [--model opus|sonnet] [--effort low|medium|high|max]
+  claive list
+  claive read <name> [--lines N]
+  claive send <name> "message"
+  claive kill <name>
+  claive status
+  claive merge <name>
+  claive plan "goal" [--budget $N]
+  claive pipeline <file.yaml>
+  claive run <pipeline.yaml> [--resume] [--status]
+  claive handoff <name>
+  claive board [add "desc" | assign <id> <agent> | done <id>]
+  claive start
+  claive stop
+  claive monitor
+  claive help
+
+Orchestrator prompting examples (after 'claive start'):
+
+  Freeform goal (reads PLAN.md, decomposes into agents, asks before spawning):
+    "Build the project at ~/projects/my-app/"
+
+  Goal with hints (you sketch the parallelism):
+    "Build the app. Setup first, then backend and frontend in parallel,
+     then integration tests, and finally the dashboard."
+
+  Pipeline YAML (exact task definitions):
+    "Run the pipeline at pipelines/my-pipeline.yaml"
+
+  Single task (one agent, no plan):
+    "Spawn an agent to add JWT authentication to the API"
+
+Options:
+  --prompt    Initial prompt for the agent
+  --budget    Budget cap in dollars (e.g., 5.00)
+  --branch    Git branch for agent isolation
+  --model     Model: opus or sonnet (default: sonnet for agents, opus for orchestrator)
+  --effort    Effort level: low, medium, high, max
+  --lines     Number of terminal lines to capture (default: 50)
+EOF
+}
+
+ensure_session() {
+    if ! tmux has-session -t "$CLAIVE_SESSION" 2>/dev/null; then
+        echo "No claive session found. Creating one..."
+        tmux new-session -d -s "$CLAIVE_SESSION" -n orchestrator
+        echo "Session '$CLAIVE_SESSION' created. Window 'orchestrator' is ready."
+    fi
+}
+
+do_status() {
+    echo "=== claive status ==="
+    echo ""
+
+    if ! tmux has-session -t "$CLAIVE_SESSION" 2>/dev/null; then
+        echo "Session: not running"
+        return
+    fi
+
+    local agents count
+    agents=$(tmux list-windows -t "$CLAIVE_SESSION" -F '#{window_name}')
+    count=$(echo "$agents" | wc -l | tr -d ' ')
+    echo "Session: $CLAIVE_SESSION (active)     $count agents"
+    echo ""
+    printf "  %-18s %-12s %s\n" "NAME" "HEARTBEAT" "BUDGET"
+
+    while IFS= read -r name; do
+        local hb budget_row
+        hb=$(python3 "$CLAIVE_LIB/heartbeat.py" status "$name" 2>/dev/null || echo "-")
+        budget_row=$(python3 "$CLAIVE_LIB/budget.py" row "$name" 2>/dev/null || echo "-")
+        printf "  %-18s %-12s %s\n" "$name" "$hb" "$budget_row"
+    done <<< "$agents"
+
+    python3 "$CLAIVE_LIB/dag.py" checkpoint-summary 2>/dev/null
+    echo ""
+    local audit_count
+    audit_count=$(wc -l < "$CLAIVE_STATE/audit.jsonl" 2>/dev/null || echo 0)
+    echo "Audit: ${audit_count// /} entries"
+}
+
+case "${1:-help}" in
+    spawn)
+        shift
+        ensure_session
+        do_spawn "$@"
+        ;;
+    list)
+        ensure_session
+        tmux list-windows -t "$CLAIVE_SESSION" -F '#{window_name}' 2>/dev/null
+        ;;
+    read)
+        shift
+        ensure_session
+        do_read "$@"
+        ;;
+    send)
+        shift
+        ensure_session
+        do_send "$@"
+        ;;
+    kill)
+        shift
+        ensure_session
+        do_kill "$@"
+        ;;
+    status)
+        do_status
+        ;;
+    merge)
+        shift
+        do_merge "$@"
+        ;;
+    plan)
+        shift
+        python3 "$CLAIVE_LIB/dag.py" plan "$@"
+        ;;
+    run)
+        shift
+        python3 "$CLAIVE_LIB/dag.py" run "$@"
+        ;;
+    pipeline)
+        shift
+        python3 "$CLAIVE_LIB/dag.py" pipeline "$@"
+        ;;
+    handoff)
+        shift
+        ensure_session
+        python3 "$CLAIVE_LIB/handoff.py" "$@"
+        ;;
+    board)
+        shift
+        python3 "$CLAIVE_LIB/dag.py" board "$@"
+        ;;
+    stop)
+        if ! tmux has-session -t "$CLAIVE_SESSION" 2>/dev/null; then
+            echo "No claive session running."
+        else
+            agent_count=$(tmux list-windows -t "$CLAIVE_SESSION" -F '#{window_name}' 2>/dev/null | wc -l | tr -d ' ')
+            tmux kill-session -t "$CLAIVE_SESSION"
+            echo "Killed session ($agent_count agents)."
+        fi
+        # Clean up runtime state
+        rm -rf "$CLAIVE_MESH/signals"/* "$CLAIVE_MESH/inbox"/* "$CLAIVE_MESH/outbox"/* 2>/dev/null || true
+        rm -f "$CLAIVE_ROOT"/pipelines/.checkpoint-*.json 2>/dev/null || true
+        echo "Cleaned up signals and checkpoints. Ready for fresh start."
+        ;;
+    start)
+        # If session exists, stop it first for a clean start
+        if tmux has-session -t "$CLAIVE_SESSION" 2>/dev/null; then
+            agent_count=$(tmux list-windows -t "$CLAIVE_SESSION" -F '#{window_name}' 2>/dev/null | wc -l | tr -d ' ')
+            echo "Existing session found ($agent_count agents). Stopping it..."
+            tmux kill-session -t "$CLAIVE_SESSION"
+            rm -rf "$CLAIVE_MESH/signals"/* "$CLAIVE_MESH/inbox"/* "$CLAIVE_MESH/outbox"/* 2>/dev/null || true
+            rm -f "$CLAIVE_ROOT"/pipelines/.checkpoint-*.json 2>/dev/null || true
+        fi
+        tmux new-session -d -s "$CLAIVE_SESSION" -n orchestrator
+        tmux send-keys -t "$CLAIVE_SESSION:orchestrator" "claude --dangerously-skip-permissions --model opus --effort low --append-system-prompt \"\$(cat $CLAIVE_ROOT/SKILL.md)\"" Enter
+        if [ -n "${TMUX:-}" ]; then
+            tmux select-window -t "$CLAIVE_SESSION:orchestrator"
+        else
+            tmux attach -t "$CLAIVE_SESSION:orchestrator"
+        fi
+        ;;
+    monitor)
+        exec watch -n 5 claive status
+        ;;
+    help|--help|-h)
+        usage
+        ;;
+    *)
+        echo "Unknown command: $1"
+        usage
+        exit 1
+        ;;
+esac

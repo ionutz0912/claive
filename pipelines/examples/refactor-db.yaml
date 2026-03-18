@@ -1,0 +1,26 @@
+# Safety-first database refactor — audit existing usage, write tests, then migrate.
+# Linear chain: each step validates the previous one.
+# Run: claive run pipelines/examples/refactor-db.yaml
+
+pipeline: refactor-db
+
+defaults:
+  budget: 5.00
+
+tasks:
+  audit:
+    prompt: "Audit all database queries in the codebase. List every file that imports the db module, what tables it touches, and whether it uses raw SQL or the query builder. Write findings to docs/db-audit.md."
+    outputs: [docs/db-audit.md]
+
+  tests-first:
+    prompt: "Using the audit at {audit.outputs}, write integration tests for every existing database query. Tests must pass against the current schema before any migration happens. This is our safety net."
+    depends_on: [audit]
+    outputs: [tests/db-integration.test.ts]
+    branch: refactor/db-tests
+
+  migrate:
+    prompt: "Refactor the database layer to use the query builder everywhere. Replace all raw SQL found in {audit.outputs}. Run the tests from {tests-first.outputs} after each file change to ensure nothing breaks."
+    depends_on: [tests-first]
+    outputs: [src/db/queries/]
+    branch: refactor/db-layer
+    budget: 10.00
