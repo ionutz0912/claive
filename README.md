@@ -263,6 +263,10 @@ ARCHITECTURE.md         — Full design document
 
 Please read [ARCHITECTURE.md](ARCHITECTURE.md) before proposing structural changes.
 
+## Author
+
+Built by [@ionutz0914](https://x.com/ionutz0914)
+
 ## License
 
 MIT
