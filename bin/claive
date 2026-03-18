@@ -179,6 +179,9 @@ case "${1:-help}" in
             rm -f "$CLAIVE_ROOT"/pipelines/.checkpoint-*.json 2>/dev/null || true
         fi
         tmux new-session -d -s "$CLAIVE_SESSION" -n orchestrator
+        # Enable mouse scrolling and increase scrollback for all claive windows
+        tmux set-option -t "$CLAIVE_SESSION" mouse on
+        tmux set-option -t "$CLAIVE_SESSION" history-limit 50000
         tmux send-keys -t "$CLAIVE_SESSION:orchestrator" "claude --dangerously-skip-permissions --model opus --effort low --append-system-prompt \"\$(cat $CLAIVE_ROOT/SKILL.md)\"" Enter
         if [ -n "${TMUX:-}" ]; then
             tmux select-window -t "$CLAIVE_SESSION:orchestrator"
