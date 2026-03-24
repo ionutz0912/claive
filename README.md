@@ -1,6 +1,6 @@
 # claive
 
-**Self-owned multi-agent orchestrator for Claude Code.**
+**v0.3.0-beta** · Self-owned multi-agent orchestrator for Claude Code.
 
 Coordinates multiple Claude Code agents through tmux, with budget governance, audit trails, goal hierarchies, and event-driven communication. ~1300 lines of code. You own every line.
 
@@ -92,15 +92,16 @@ Then talk to it in natural language. It reads your `state/goals.md`, decomposes 
 
 | Command | Description |
 |---------|-------------|
-| `claive start` | Launch interactive orchestrator (Claude Code + SKILL.md in tmux) |
-| `claive stop` | Kill session + clean up signals and checkpoints |
+| `claive start [<session>]` | Launch interactive orchestrator (Claude Code + SKILL.md in tmux) |
+| `claive stop [<session>]` | Kill session + clean up signals and checkpoints |
 | `claive spawn <name> [--prompt "..."] [--branch <b>] [--budget $N]` | Spawn an agent |
 | `claive list` | Show all active agents |
 | `claive read <name> [--lines N]` | Read agent's terminal output + status |
 | `claive send <name> "msg"` | Send message to agent |
 | `claive kill <name>` | Terminate agent |
-| `claive status` | Show system overview (agents, heartbeats, budgets, pipelines) |
-| `claive monitor` | Watch `claive status` every 5 seconds |
+| `claive status [<session>]` | List all sessions, or show detail for one session |
+| `claive monitor [<session>]` | Watch `claive status` every 5 seconds |
+| `claive discover [--print]` | Scan skills, MCPs, plugins, templates → `context/capabilities.md` |
 | `claive plan "goal" [--budget $N]` | Generate pipeline YAML from goal description |
 | `claive pipeline <file.yaml>` | Parse pipeline and print DAG layers + prompts |
 | `claive run <pipeline.yaml> [--resume] [--status]` | Execute DAG pipeline (blocking) |
@@ -132,10 +133,12 @@ The orchestrator reads PLAN.md, decomposes into agents, shows you the plan, and 
 ### Monitoring agents
 
 ```bash
-claive status                     # Overview: all agents, heartbeats, budgets, pipeline progress
+claive status                     # List all active claive sessions
+claive status myproject           # Detailed view for one session (agents, heartbeats, budgets)
 claive read detectors             # Last 50 lines of an agent's terminal
 claive read detectors --lines 100 # More context
 tmux attach -t claive:detectors   # Jump into the agent's terminal live (Ctrl-b d to detach)
+# For named sessions: tmux attach -t claive-myproject:detectors
 ```
 
 Inside tmux, switch between agents:
@@ -204,19 +207,46 @@ claive board done 1
 claive send frontend "Backend is done. API returns {id, items[], total, status} at GET /api/orders"
 ```
 
+### Multi-session (run multiple projects in parallel)
+
+Each session gets isolated state under `state/<session>/` and `.claive/<session>/`. The audit trail at `state/audit.jsonl` is shared across all sessions.
+
+```bash
+# Default session (tmux session: "claive")
+claive start
+claive status
+
+# Named sessions (tmux session: "claive-<name>")
+claive start backend        # tmux session: claive-backend
+claive start frontend       # tmux session: claive-frontend
+
+claive status               # List all active claive sessions
+claive status backend       # Detailed view: agents, heartbeats, budgets for backend
+claive stop frontend        # Stop only the frontend session
+
+# Target a specific session for any command
+claive spawn api --prompt "..." --session backend
+```
+
+The `CLAIVE_SESSION` environment variable sets the default session for all commands:
+```bash
+CLAIVE_SESSION=backend claive status    # Same as: claive status backend
+```
+
 ### Command matrix
 
 | What you want to do | Command | Notes |
 |---------------------|---------|-------|
-| Launch orchestrator | `claive start` | Interactive Claude Code session |
-| Stop everything | `claive stop` | Kills session + cleans signals/checkpoints |
+| Launch orchestrator | `claive start [session]` | Interactive Claude Code session |
+| Stop everything | `claive stop [session]` | Kills session + cleans signals/checkpoints |
+| List sessions / detail | `claive status [session]` | All sessions or detail for one |
+| Live monitoring | `claive monitor [session]` | Refreshes every 5 seconds |
+| Scan capabilities | `claive discover` | Writes skills/MCPs/plugins to `context/capabilities.md` |
 | Start a multi-agent project | `claive plan "goal"` | Generates pipeline YAML |
 | Preview a pipeline | `claive pipeline file.yaml` | Shows DAG layers + prompts |
 | Run a pipeline | `claive run pipeline.yaml` | Blocking — prefer orchestrator |
 | Resume a failed pipeline | `claive run pipeline.yaml --resume` | Skips completed tasks |
 | Check pipeline progress | `claive run pipeline.yaml --status` | Shows task states |
-| See everything at once | `claive status` | Agents + heartbeats + budgets + pipelines |
-| Live monitoring | `claive monitor` | Refreshes every 5 seconds |
 | Spawn one agent | `claive spawn name --prompt "..."` | Manual mode |
 | Read agent output | `claive read name` | Last 50 lines of terminal |
 | Send agent a message | `claive send name "msg"` | Types into agent's terminal |

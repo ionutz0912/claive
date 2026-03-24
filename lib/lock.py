@@ -15,6 +15,7 @@ def file_lock(path, mode="r+"):
     """
     if mode == "r+" and not os.path.exists(path):
         # Create with restricted permissions
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         fd = os.open(path, os.O_CREAT | os.O_WRONLY, 0o600)
         os.close(fd)
 
@@ -42,6 +43,7 @@ def read_json_locked(path, default=None):
 
 def write_json_locked(path, data):
     """Write a JSON file with exclusive lock. Sets chmod 600."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     with file_lock(path, "w") as f:
         json.dump(data, f, indent=2)
         f.write("\n")

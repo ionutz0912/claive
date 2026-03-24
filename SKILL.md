@@ -18,12 +18,17 @@ python3 lib/audit.py show --last 10  # Recent audit entries
 
 **NEVER use `claive run`** — it is a blocking scheduler that freezes your session. Always use `claive pipeline` to read the YAML, then spawn agents manually.
 
+## Session Identity
+
+Your session name is in the `CLAIVE_SESSION` environment variable. Default is `"claive"`. Named sessions use `claive-<name>` as the tmux session. State is isolated per session under `state/<session>/` and `.claive/<session>/`. The audit trail at `state/audit.jsonl` is shared across all sessions.
+
 ## Your Protocol
 
 ### Before any task:
 1. Read `state/goals.md` to understand the mission and current priorities
-2. Check `state/budget.json` to know spending limits
-3. Run `claive status` to see what's already running
+2. Read `context/capabilities.md` to know available skills, MCPs, and plugins — use these when writing agent prompts
+3. Check `state/budget.json` to know spending limits
+4. Run `claive status` to see what's already running
 
 ### Handling requests:
 

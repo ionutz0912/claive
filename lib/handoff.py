@@ -12,10 +12,11 @@ import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(SCRIPT_DIR)
-STATE_DIR = os.path.join(ROOT_DIR, "state")
-MESH_DIR = os.path.join(ROOT_DIR, ".claive")
+SESSION_NAME = os.environ.get("CLAIVE_SESSION", "claive")
+STATE_DIR = os.path.join(ROOT_DIR, "state", SESSION_NAME)
+MESH_DIR = os.path.join(ROOT_DIR, ".claive", SESSION_NAME)
 BUDGET_FILE = os.path.join(STATE_DIR, "budget.json")
-SESSION = "claive"
+SESSION = f"claive-{SESSION_NAME}" if SESSION_NAME != "claive" else "claive"
 
 sys.path.insert(0, SCRIPT_DIR)
 from lock import read_json_locked

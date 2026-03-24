@@ -10,7 +10,9 @@ import os
 import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-STATE_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), "state")
+ROOT_DIR = os.path.dirname(SCRIPT_DIR)
+SESSION_NAME = os.environ.get("CLAIVE_SESSION", "claive")
+STATE_DIR = os.path.join(ROOT_DIR, "state", SESSION_NAME)
 BUDGET_FILE = os.path.join(STATE_DIR, "budget.json")
 
 # Import lock helpers

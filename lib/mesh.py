@@ -15,7 +15,7 @@ from pathlib import Path
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CLAIVE_ROOT = os.path.dirname(SCRIPT_DIR)
-MESH_DIR = os.path.join(CLAIVE_ROOT, ".claive")
+MESH_DIR = os.path.join(CLAIVE_ROOT, ".claive", os.environ.get("CLAIVE_SESSION", "claive"))
 
 try:
     from watchdog.observers import Observer

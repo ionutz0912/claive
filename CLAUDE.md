@@ -15,16 +15,17 @@ lib/dag.py              — DAG pipeline parser, topo sort, scheduler, task boar
 lib/mesh.py             — EventMesh: watchdog filesystem events (replaces polling)
 lib/heartbeat.py        — Agent liveness monitoring (stale detection)
 lib/handoff.py          — Context handoff: capture → kill → respawn with continuation
+lib/discover.py         — Capabilities scanner (skills, MCPs, plugins, templates)
 lib/__init__.py         — Python package marker
 hooks/session-tracker.py — Claude Code hook mapping sessions to tmux windows
 state/goals.md          — Mission + project hierarchy (strategic, human-curated)
-state/board.json        — Mutable task board (operational, agent-writable) [gitignored]
-state/budget.json       — Per-agent budget tracking [gitignored]
-state/audit.jsonl       — Action log [gitignored]
+state/audit.jsonl       — Shared audit trail across sessions [gitignored]
+state/<session>/board.json  — Per-session task board [gitignored]
+state/<session>/budget.json — Per-session budget tracking [gitignored]
 pipelines/              — User-created DAG pipeline YAML files
 pipelines/examples/     — Reference pipeline patterns (auth, refactor, docs)
 templates/solo-dev.yaml — Pre-built 4-agent team configuration
-.claive/                — EventMesh runtime (inbox/outbox/signals) [gitignored]
+.claive/<session>/      — Per-session EventMesh runtime (inbox/outbox/signals) [gitignored]
 context/agent-protocol.md       — Agent communication channels and bootstrap protocol
 context/architecture-decisions.md — Core design choices and anti-patterns
 context/security-model.md       — Trust boundaries, hardening, known limitations

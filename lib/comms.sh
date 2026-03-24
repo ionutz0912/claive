@@ -24,14 +24,14 @@ do_read() {
         return 1
     fi
 
-    if ! tmux list-windows -t "$CLAIVE_SESSION" -F '#{window_name}' 2>/dev/null | grep -qx "$name"; then
+    if ! tmux list-windows -t "$CLAIVE_TMUX" -F '#{window_name}' 2>/dev/null | grep -qx "$name"; then
         echo "Error: agent '$name' not found"
         return 1
     fi
 
     # Capture terminal output
     local output
-    output=$(tmux capture-pane -t "$CLAIVE_SESSION:$name" -p -S "-$lines" 2>/dev/null)
+    output=$(tmux capture-pane -t "$CLAIVE_TMUX:$name" -p -S "-$lines" 2>/dev/null)
 
     echo "=== Agent: $name (last $lines lines) ==="
     echo "$output"
@@ -69,7 +69,7 @@ do_send() {
         return 1
     fi
 
-    if ! tmux list-windows -t "$CLAIVE_SESSION" -F '#{window_name}' 2>/dev/null | grep -qx "$name"; then
+    if ! tmux list-windows -t "$CLAIVE_TMUX" -F '#{window_name}' 2>/dev/null | grep -qx "$name"; then
         echo "Error: agent '$name' not found"
         return 1
     fi
@@ -82,7 +82,7 @@ do_send() {
     echo "$message" > "$inbox_dir/$ts-message.md"
 
     # Also inject via tmux send-keys for immediate delivery
-    tmux send-keys -t "$CLAIVE_SESSION:$name" "$message" Enter
+    tmux send-keys -t "$CLAIVE_TMUX:$name" "$message" Enter
 
     # Log the action
     python3 "$CLAIVE_LIB/audit.py" log send "$name: $(echo "$message" | head -c 80)" 2>/dev/null || true

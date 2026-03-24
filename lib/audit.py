@@ -8,7 +8,8 @@ import sys
 from datetime import datetime, timezone
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-STATE_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), "state")
+ROOT_DIR = os.path.dirname(SCRIPT_DIR)
+STATE_DIR = os.path.join(ROOT_DIR, "state")
 AUDIT_FILE = os.path.join(STATE_DIR, "audit.jsonl")
 
 
@@ -21,6 +22,7 @@ def audit_log(action, details=""):
         "action": action,
         "details": details,
         "pid": os.getpid(),
+        "session": os.environ.get("CLAIVE_SESSION", "claive"),
     }
 
     line = json.dumps(entry, separators=(",", ":")) + "\n"

@@ -15,7 +15,8 @@ from datetime import datetime, timezone
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CLAIVE_ROOT = os.path.dirname(SCRIPT_DIR)
-STATE_DIR = os.path.join(CLAIVE_ROOT, "state")
+SESSION_NAME = os.environ.get("CLAIVE_SESSION", "claive")
+STATE_DIR = os.path.join(CLAIVE_ROOT, "state", SESSION_NAME)
 PIPELINES_DIR = os.path.join(CLAIVE_ROOT, "pipelines")
 BOARD_FILE = os.path.join(STATE_DIR, "board.json")
 
@@ -188,7 +189,7 @@ def do_run(args):
         return
 
     # Execute the DAG
-    signals_dir = os.path.join(CLAIVE_ROOT, ".claive", "signals")
+    signals_dir = os.path.join(CLAIVE_ROOT, ".claive", SESSION_NAME, "signals")
     os.makedirs(signals_dir, exist_ok=True)
 
     print(f"Running pipeline: {pipeline.name}")
@@ -345,7 +346,7 @@ def do_plan(args):
 
     slug = _slugify(goal)
     output_path = os.path.join(PIPELINES_DIR, f"{slug}.yaml")
-    goals_path = os.path.join(STATE_DIR, "goals.md")
+    goals_path = os.path.join(CLAIVE_ROOT, "state", "goals.md")
 
     prompt = f"""\
 You are a claive planner agent. Your job: decompose a goal into a pipeline YAML that claive can execute.

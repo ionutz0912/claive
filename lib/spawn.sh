@@ -26,7 +26,7 @@ do_spawn() {
         return 1
     fi
 
-    if tmux list-windows -t "$CLAIVE_SESSION" -F '#{window_name}' 2>/dev/null | grep -qx "$name"; then
+    if tmux list-windows -t "$CLAIVE_TMUX" -F '#{window_name}' 2>/dev/null | grep -qx "$name"; then
         echo "Error: agent '$name' already exists"
         return 1
     fi
@@ -65,8 +65,8 @@ BOOTSTRAP
         cmd="git checkout $branch && claude $claude_flags"
     fi
 
-    tmux new-window -t "$CLAIVE_SESSION" -n "$name" "$cmd"
-    tmux select-window -t "$CLAIVE_SESSION:orchestrator" 2>/dev/null || true
+    tmux new-window -t "$CLAIVE_TMUX" -n "$name" "$cmd"
+    tmux select-window -t "$CLAIVE_TMUX:orchestrator" 2>/dev/null || true
 
     python3 "$CLAIVE_LIB/audit.py" log spawn "$name" 2>/dev/null || true
 
@@ -84,12 +84,12 @@ do_kill() {
         return 1
     fi
 
-    if ! tmux list-windows -t "$CLAIVE_SESSION" -F '#{window_name}' 2>/dev/null | grep -qx "$name"; then
+    if ! tmux list-windows -t "$CLAIVE_TMUX" -F '#{window_name}' 2>/dev/null | grep -qx "$name"; then
         echo "Error: agent '$name' not found"
         return 1
     fi
 
-    tmux kill-window -t "$CLAIVE_SESSION:$name"
+    tmux kill-window -t "$CLAIVE_TMUX:$name"
 
     # Clean up EventMesh directories
     rm -rf "$CLAIVE_MESH/inbox/$name" "$CLAIVE_MESH/outbox/$name"

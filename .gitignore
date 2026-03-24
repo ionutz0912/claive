@@ -10,11 +10,17 @@ state/sessions.json
 state/budget.json
 state/audit.jsonl
 state/board.json
+state/*/budget.json
+state/*/board.json
 
 # EventMesh runtime directories (recreated at runtime)
 .claive/inbox/
 .claive/outbox/
 .claive/signals/
+.claive/*/
+
+# Auto-generated capabilities manifest (machine-specific)
+context/capabilities.md
 
 # Pipeline checkpoints
 pipelines/.checkpoint-*
